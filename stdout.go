@@ -16,6 +16,11 @@ func (o *stdout) Config(cfg string) error {
 	return nil
 }
 
+// NewExpeller is what reservoird to create and start stdout
+func NewExpeller() (icd.Expeller, error) {
+	return new(stdout), nil
+}
+
 // Expel reads messages from a channel and writes them to stdout
 func (o *stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGroup) error {
 	defer wg.Done()
