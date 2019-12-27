@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/reservoird/reservoird/run"
+	"github.com/reservoird/icd"
 )
 
 type stdout struct {
@@ -17,7 +17,7 @@ func (o *stdout) Config(cfg string) error {
 }
 
 // Expel reads messages from a channel and writes them to stdout
-func (o *stdout) Expel(queue run.Queue, done <-chan struct{}, wg *sync.WaitGroup) error {
+func (o *stdout) Expel(queue icd.Queue, done <-chan struct{}, wg *sync.WaitGroup) error {
 	defer wg.Done()
 	o.run = true
 	for o.run == true {
