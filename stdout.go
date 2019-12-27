@@ -24,10 +24,14 @@ func NewExpeller() (icd.Expeller, error) {
 // Expel reads messages from a channel and writes them to stdout
 func (o *stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGroup) error {
 	defer wg.Done()
+	fmt.Printf("stdout.expel: into\n")
+
 	o.run = true
 	for o.run == true {
 		for q := range queues {
+			fmt.Printf("stdout.expel: before pop\n")
 			d, err := queues[q].Pop()
+			fmt.Printf("stdout.expel: after pop\n")
 			if err != nil {
 				return err
 			}
@@ -43,6 +47,7 @@ func (o *stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 		default:
 		}
 	}
+	fmt.Printf("stdout.expel: outof\n")
 	return nil
 }
 
