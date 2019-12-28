@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"reflect"
 	"sync"
 	"time"
 
@@ -12,8 +13,13 @@ import (
 
 type stdout struct {
 	run       bool
-	Name      string
+	Tag       string
 	Timestamp bool
+}
+
+// NewExpeller is what reservoird to create and start stdout
+func NewExpeller() (icd.Expeller, error) {
+	return new(stdout), nil
 }
 
 // Config configures consumer
@@ -27,14 +33,16 @@ func (o *stdout) Config(cfg string) error {
 	if err != nil {
 		return err
 	}
-	o.Name = s.Name
+	o.Tag = s.Tag
 	o.Timestamp = s.Timestamp
 	return nil
 }
 
-// NewExpeller is what reservoird to create and start stdout
-func NewExpeller() (icd.Expeller, error) {
-	return new(stdout), nil
+func (o *stdout) Name() string {
+	if o.Tag == "" {
+		return fmt.Sprintf(reflect.TypeOf(*o).String())
+	}
+	return o.Tag
 }
 
 // Expel reads messages from a channel and writes them to stdout
@@ -54,7 +62,7 @@ func (o *stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 			}
 			line := string(data)
 			if o.Timestamp == true {
-				line = fmt.Sprintf("[%s %s] ", o.Name, time.Now().Format(time.RFC3339)) + line
+				line = fmt.Sprintf("[%s %s] ", o.Name(), time.Now().Format(time.RFC3339)) + line
 			}
 			fmt.Printf("%s", line)
 		}
