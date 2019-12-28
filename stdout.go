@@ -24,17 +24,21 @@ func NewExpeller() (icd.Expeller, error) {
 
 // Config configures consumer
 func (o *stdout) Config(cfg string) error {
-	d, err := ioutil.ReadFile(cfg)
-	if err != nil {
-		return err
+	o.Tag = "stdout"
+	o.Timestamp = false
+	if cfg != "" {
+		d, err := ioutil.ReadFile(cfg)
+		if err != nil {
+			return err
+		}
+		s := stdout{}
+		err = json.Unmarshal(d, &s)
+		if err != nil {
+			return err
+		}
+		o.Tag = s.Tag
+		o.Timestamp = s.Timestamp
 	}
-	s := stdout{}
-	err = json.Unmarshal(d, &s)
-	if err != nil {
-		return err
-	}
-	o.Tag = s.Tag
-	o.Timestamp = s.Timestamp
 	return nil
 }
 
