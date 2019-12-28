@@ -76,7 +76,7 @@ func (o *stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 		case <-done:
 			o.run = false
 		default:
-			time.Sleep(time.Second)
+			time.Sleep(time.Millisecond)
 		}
 	}
 	return nil
