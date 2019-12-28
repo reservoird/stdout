@@ -55,22 +55,28 @@ func (o *stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 		for q := range queues {
 			d, err := queues[q].Get()
 			if err != nil {
-				return err
+				fmt.Printf("%v\n", err)
+			} else {
+				if d != nil {
+					data, ok := d.([]byte)
+					if ok == false {
+						fmt.Printf("error invalid type\n")
+					} else {
+						line := string(data)
+						if o.Timestamp == true {
+							line = fmt.Sprintf("[%s %s] ", o.Name(), time.Now().Format(time.RFC3339)) + line
+						}
+						fmt.Printf("%s", line)
+					}
+				}
 			}
-			data, ok := d.([]byte)
-			if ok == false {
-				return fmt.Errorf("error invalid type")
-			}
-			line := string(data)
-			if o.Timestamp == true {
-				line = fmt.Sprintf("[%s %s] ", o.Name(), time.Now().Format(time.RFC3339)) + line
-			}
-			fmt.Printf("%s", line)
 		}
+
 		select {
 		case <-done:
 			o.run = false
 		default:
+			time.Sleep(time.Second)
 		}
 	}
 	return nil
