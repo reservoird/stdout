@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"reflect"
 	"sync"
 	"time"
 
@@ -42,10 +41,8 @@ func (o *stdout) Config(cfg string) error {
 	return nil
 }
 
+// Name provides name of expeller
 func (o *stdout) Name() string {
-	if o.Tag == "" {
-		return fmt.Sprintf(reflect.TypeOf(*o).String())
-	}
 	return o.Tag
 }
 
