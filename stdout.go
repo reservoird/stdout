@@ -1,18 +1,34 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"sync"
+	"time"
 
 	"github.com/reservoird/icd"
 )
 
 type stdout struct {
-	run bool
+	run       bool
+	Name      string
+	Timestamp bool
 }
 
 // Config configures consumer
 func (o *stdout) Config(cfg string) error {
+	d, err := ioutil.ReadFile(cfg)
+	if err != nil {
+		return err
+	}
+	s := stdout{}
+	err = json.Unmarshal(d, &s)
+	if err != nil {
+		return err
+	}
+	o.Name = s.Name
+	o.Timestamp = s.Timestamp
 	return nil
 }
 
@@ -32,9 +48,13 @@ func (o *stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 			if err != nil {
 				return err
 			}
-			line, ok := d.([]byte)
+			data, ok := d.([]byte)
 			if ok == false {
 				return fmt.Errorf("error invalid type")
+			}
+			line := string(data)
+			if o.Timestamp == true {
+				line = fmt.Sprintf("%s %s", o.Name, time.Now().Format(time.RFC3339)) + line
 			}
 			fmt.Printf("%s", line)
 		}
