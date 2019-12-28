@@ -56,7 +56,7 @@ func (o *stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 	o.run = true
 	for o.run == true {
 		for q := range queues {
-			d, err := queues[q].Pop()
+			d, err := queues[q].Get()
 			if err != nil {
 				return err
 			}
