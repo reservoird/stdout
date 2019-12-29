@@ -11,14 +11,17 @@ import (
 )
 
 type stdout struct {
+	stats     chan<- string
 	run       bool
 	Tag       string
 	Timestamp bool
 }
 
 // New is what reservoird to create and start stdout
-func New(cfg string) (icd.Expeller, error) {
+func New(cfg string, stats chan<- string) (icd.Expeller, error) {
 	o := &stdout{
+		stats:     stats,
+		run:       true,
 		Tag:       "stdout",
 		Timestamp: false,
 	}
