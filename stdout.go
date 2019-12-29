@@ -16,29 +16,23 @@ type stdout struct {
 	Timestamp bool
 }
 
-// NewExpeller is what reservoird to create and start stdout
-func NewExpeller() (icd.Expeller, error) {
-	return new(stdout), nil
-}
-
-// Config configures consumer
-func (o *stdout) Config(cfg string) error {
-	o.Tag = "stdout"
-	o.Timestamp = false
+// New is what reservoird to create and start stdout
+func New(cfg string) (icd.Expeller, error) {
+	o := &stdout{
+		Tag:       "stdout",
+		Timestamp: false,
+	}
 	if cfg != "" {
 		d, err := ioutil.ReadFile(cfg)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		s := stdout{}
-		err = json.Unmarshal(d, &s)
+		err = json.Unmarshal(d, o)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		o.Tag = s.Tag
-		o.Timestamp = s.Timestamp
 	}
-	return nil
+	return o, nil
 }
 
 // Name provides name of expeller
