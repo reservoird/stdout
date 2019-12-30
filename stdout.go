@@ -30,7 +30,7 @@ type stdout struct {
 // New is what reservoird to create and start stdout
 func New(cfg string, statsChan chan<- string) (icd.Expeller, error) {
 	c := stdoutCfg{
-		Name:      "stdout",
+		Name:      "com.reservoird.expel.stdout",
 		Timestamp: false,
 	}
 	if cfg != "" {
