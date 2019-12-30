@@ -32,7 +32,7 @@ type Stdout struct {
 }
 
 // New is what reservoird to create and start stdout
-func New(cfg string, statsChan chan<- string) (icd.Expeller, error) {
+func New(cfg string) (icd.Expeller, error) {
 	c := StdoutCfg{
 		Name:      "com.reservoird.expel.stdout",
 		Timestamp: false,
