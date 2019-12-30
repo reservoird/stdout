@@ -10,19 +10,27 @@ import (
 	"github.com/reservoird/icd"
 )
 
-type stdout struct {
-	stats     chan<- string
-	run       bool
-	Tag       string
+type stdoutCfg struct {
+	Name      string
 	Timestamp bool
 }
 
+type stdoutStats struct {
+	MsgsRead uint64
+	MsgsSent uint64
+	Active   bool
+}
+
+type stdout struct {
+	cfg       stdoutCfg
+	stats     stdoutStats
+	statsChan chan<- string
+}
+
 // New is what reservoird to create and start stdout
-func New(cfg string, stats chan<- string) (icd.Expeller, error) {
-	o := &stdout{
-		stats:     stats,
-		run:       true,
-		Tag:       "stdout",
+func New(cfg string, statsChan chan<- string) (icd.Expeller, error) {
+	c := stdoutCfg{
+		Name:      "stdout",
 		Timestamp: false,
 	}
 	if cfg != "" {
@@ -30,40 +38,47 @@ func New(cfg string, stats chan<- string) (icd.Expeller, error) {
 		if err != nil {
 			return nil, err
 		}
-		err = json.Unmarshal(d, o)
+		err = json.Unmarshal(d, &c)
 		if err != nil {
 			return nil, err
 		}
+	}
+	o := &stdout{
+		cfg:       c,
+		stats:     stdoutStats{},
+		statsChan: statsChan,
 	}
 	return o, nil
 }
 
 // Name provides name of expeller
 func (o *stdout) Name() string {
-	return o.Tag
+	return o.cfg.Name
 }
 
 // Expel reads messages from a channel and writes them to stdout
 func (o *stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGroup) error {
 	defer wg.Done()
 
-	o.run = true
-	for o.run == true {
+	o.stats.Active = true
+	for o.stats.Active == true {
 		for q := range queues {
-			d, err := queues[q].Get()
-			if err != nil {
-				fmt.Printf("%v\n", err)
-			} else {
-				if d != nil {
-					data, ok := d.([]byte)
-					if ok == false {
-						fmt.Printf("error invalid type\n")
-					} else {
-						line := string(data)
-						if o.Timestamp == true {
-							line = fmt.Sprintf("[%s %s] ", o.Name(), time.Now().Format(time.RFC3339)) + line
+			if queues[q].Closed() == false {
+				d, err := queues[q].Get()
+				if err != nil {
+					fmt.Printf("%v\n", err)
+				} else {
+					if d != nil {
+						data, ok := d.([]byte)
+						if ok == false {
+							fmt.Printf("error invalid type\n")
+						} else {
+							line := string(data)
+							if o.cfg.Timestamp == true {
+								line = fmt.Sprintf("[%s %s] ", o.Name(), time.Now().Format(time.RFC3339)) + line
+							}
+							fmt.Printf("%s", line)
 						}
-						fmt.Printf("%s", line)
 					}
 				}
 			}
@@ -71,9 +86,18 @@ func (o *stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 
 		select {
 		case <-done:
-			o.run = false
+			o.stats.Active = false
 		default:
 			time.Sleep(time.Millisecond)
+		}
+
+		stats, err := json.Marshal(o.stats)
+		if err != nil {
+			fmt.Printf("%v\n", err)
+		}
+		select {
+		case o.statsChan <- string(stats):
+		default:
 		}
 	}
 	return nil
