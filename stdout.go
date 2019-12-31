@@ -49,8 +49,8 @@ func New(cfg string) (icd.Expeller, error) {
 	}
 	o := &Stdout{
 		cfg:       c,
-		statsChan: make(chan StdoutStats),
-		clearChan: make(chan struct{}),
+		statsChan: make(chan StdoutStats, 1),
+		clearChan: make(chan struct{}, 1),
 	}
 	return o, nil
 }
