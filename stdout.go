@@ -18,6 +18,7 @@ type StdoutCfg struct {
 
 // StdoutStats contains stats
 type StdoutStats struct {
+	Name             string
 	MessagesReceived uint64
 	MessagesSent     uint64
 	Running          bool
@@ -116,6 +117,7 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 	stats := StdoutStats{}
 
 	run := true
+	stats.Name = o.cfg.Name
 	stats.Running = run
 	for run == true {
 		for q := range queues {
@@ -146,6 +148,7 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 		select {
 		case <-o.clearChan:
 			stats = StdoutStats{}
+			stats.Name = o.cfg.Name
 			stats.Running = run
 		default:
 		}
