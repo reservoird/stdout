@@ -27,8 +27,8 @@ type StdoutStats struct {
 type Stdout struct {
 	cfg       StdoutCfg
 	run       bool
-	statsChan chan StdoutStats
-	clearChan chan struct{}
+	stats     StdoutStats
+	statsLock sync.Mutex
 }
 
 // New is what reservoird to create and start stdout
@@ -50,8 +50,8 @@ func New(cfg string) (icd.Expeller, error) {
 	o := &Stdout{
 		cfg:       c,
 		run:       true,
-		statsChan: make(chan StdoutStats),
-		clearChan: make(chan struct{}),
+		stats:     StdoutStats{},
+		statsLock: sync.Mutex{},
 	}
 	return o, nil
 }
@@ -63,33 +63,46 @@ func (o *Stdout) Name() string {
 
 // Stats return stats NOTE: thread safe
 func (o *Stdout) Stats() (string, error) {
-	select {
-	case stats := <-o.statsChan:
-		data, err := json.Marshal(stats)
-		if err != nil {
-			return "", err
-		}
-		return string(data), nil
-	default:
+	o.statsLock.Lock()
+	defer o.statsLock.Unlock()
+	data, err := json.Marshal(o.stats)
+	if err != nil {
+		return "", err
 	}
-	return "", nil
+	return string(data), nil
 }
 
 // ClearStats clears stats NOTE: thread safe
 func (o *Stdout) ClearStats() {
-	select {
-	case o.clearChan <- struct{}{}:
-	default:
-	}
+	o.statsLock.Lock()
+	defer o.statsLock.Unlock()
+	o.stats = StdoutStats{}
+}
+
+func (o *Stdout) incMessagesReceived() {
+	o.statsLock.Lock()
+	defer o.statsLock.Unlock()
+	o.stats.MessagesReceived = o.stats.MessagesReceived + 1
+}
+
+func (o *Stdout) incMessagesSent() {
+	o.statsLock.Lock()
+	defer o.statsLock.Unlock()
+	o.stats.MessagesSent = o.stats.MessagesSent + 1
+}
+
+func (o *Stdout) setRunning(run bool) {
+	o.statsLock.Lock()
+	defer o.statsLock.Unlock()
+	o.stats.Running = run
 }
 
 // Expel reads messages from a channel and writes them to stdout
 func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGroup) error {
 	defer wg.Done()
 
-	stats := StdoutStats{}
-
 	o.run = true
+	o.setRunning(o.run)
 	for o.run == true {
 		for q := range queues {
 			if queues[q].Closed() == false {
@@ -98,7 +111,7 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 					fmt.Printf("%v\n", err)
 				} else {
 					if d != nil {
-						stats.MessagesReceived = stats.MessagesReceived + 1
+						o.incMessagesReceived()
 						data, ok := d.([]byte)
 						if ok == false {
 							fmt.Printf("error invalid type\n")
@@ -108,7 +121,7 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 								line = fmt.Sprintf("[%s %s] ", o.Name(), time.Now().Format(time.RFC3339)) + line
 							}
 							fmt.Printf("%s", line)
-							stats.MessagesSent = stats.MessagesSent + 1
+							o.incMessagesSent()
 						}
 					}
 				}
@@ -116,20 +129,9 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 		}
 
 		select {
-		case <-o.clearChan:
-			stats = StdoutStats{}
-		default:
-		}
-
-		select {
 		case <-done:
 			o.run = false
-		default:
-		}
-
-		stats.Running = o.run
-		select {
-		case o.statsChan <- stats:
+			o.setRunning(o.run)
 		default:
 		}
 
