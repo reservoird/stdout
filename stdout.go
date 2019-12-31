@@ -103,7 +103,9 @@ func (o *Stdout) Monitor(statsChan chan<- string, clearChan <-chan struct{}, don
 			}
 		}
 
-		time.Sleep(time.Second)
+		if monrun == true {
+			time.Sleep(time.Second)
+		}
 	}
 }
 
@@ -162,7 +164,9 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 		default:
 		}
 
-		time.Sleep(time.Millisecond)
+		if run == true {
+			time.Sleep(time.Millisecond)
+		}
 	}
 	return nil
 }
