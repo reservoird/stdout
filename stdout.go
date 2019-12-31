@@ -145,6 +145,7 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 		case <-o.clearChan:
 			stats = StdoutStats{}
 			stats.Running = run
+		default:
 		}
 
 		// listen for shutdown
