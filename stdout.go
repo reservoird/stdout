@@ -28,6 +28,7 @@ type StdoutStats struct {
 // Stdout contains what is needed for expeller
 type Stdout struct {
 	cfg       StdoutCfg
+	run       bool
 	statsChan chan StdoutStats
 	clearChan chan struct{}
 }
@@ -50,6 +51,7 @@ func New(cfg string) (icd.Expeller, error) {
 	}
 	o := &Stdout{
 		cfg:       c,
+		run:       false,
 		statsChan: make(chan StdoutStats, 1),
 		clearChan: make(chan struct{}, 1),
 	}
@@ -110,16 +112,21 @@ func (o *Stdout) Monitor(statsChan chan<- string, clearChan <-chan struct{}, don
 	}
 }
 
+// Running states whether or not expel is running
+func (o *Stdout) Running() bool {
+	return o.run
+}
+
 // Expel reads messages from a channel and writes them to stdout
 func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGroup) error {
 	defer wg.Done()
 
 	stats := StdoutStats{}
 
-	run := true
+	o.run = true
 	stats.Name = o.cfg.Name
-	stats.Running = run
-	for run == true {
+	stats.Running = o.run
+	for o.run == true {
 		for q := range queues {
 			if queues[q].Closed() == false {
 				d, err := queues[q].Get()
@@ -149,15 +156,15 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 		case <-o.clearChan:
 			stats = StdoutStats{}
 			stats.Name = o.cfg.Name
-			stats.Running = run
+			stats.Running = o.run
 		default:
 		}
 
 		// listen for shutdown
 		select {
 		case <-done:
-			run = false
-			stats.Running = run
+			o.run = false
+			stats.Running = o.run
 		default:
 		}
 
@@ -167,7 +174,7 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 		default:
 		}
 
-		if run == true {
+		if o.run == true {
 			time.Sleep(time.Millisecond)
 		}
 	}
