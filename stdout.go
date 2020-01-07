@@ -160,17 +160,19 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 		default:
 		}
 
+		// send to monitor
+		select {
+		case o.statsChan <- stats:
+		default:
+		}
+
 		// listen for shutdown
 		select {
 		case <-done:
 			o.run = false
 			stats.Running = o.run
-		default:
-		}
-
-		// send to monitor
-		select {
-		case o.statsChan <- stats:
+			// send final stats blocking
+			o.statsChan <- stats
 		default:
 		}
 
