@@ -118,7 +118,7 @@ func (o *Stdout) Running() bool {
 }
 
 // Expel reads messages from a channel and writes them to stdout
-func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGroup) error {
+func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGroup) {
 	defer wg.Done()
 
 	stats := StdoutStats{}
@@ -180,5 +180,4 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 			time.Sleep(time.Millisecond)
 		}
 	}
-	return nil
 }
