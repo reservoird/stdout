@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"sync"
 	"time"
 
 	"github.com/reservoird/icd"
@@ -27,10 +26,8 @@ type StdoutStats struct {
 
 // Stdout contains what is needed for expeller
 type Stdout struct {
-	cfg       StdoutCfg
-	run       bool
-	statsChan chan StdoutStats
-	clearChan chan struct{}
+	cfg StdoutCfg
+	run bool
 }
 
 // New is what reservoird to create and start stdout
@@ -50,10 +47,8 @@ func New(cfg string) (icd.Expeller, error) {
 		}
 	}
 	o := &Stdout{
-		cfg:       c,
-		run:       false,
-		statsChan: make(chan StdoutStats, 1),
-		clearChan: make(chan struct{}, 1),
+		cfg: c,
+		run: false,
 	}
 	return o, nil
 }
@@ -63,63 +58,14 @@ func (o *Stdout) Name() string {
 	return o.cfg.Name
 }
 
-// Monitor provides statistics and clear
-func (o *Stdout) Monitor(statsChan chan<- string, clearChan <-chan struct{}, doneChan <-chan struct{}, wg *sync.WaitGroup) {
-	defer wg.Done() // required
-
-	stats := StdoutStats{}
-	monrun := true
-	for monrun == true {
-		// clear
-		select {
-		case <-clearChan:
-			select {
-			case o.clearChan <- struct{}{}:
-			default:
-			}
-		default:
-		}
-
-		// done
-		select {
-		case <-doneChan:
-			monrun = false
-		default:
-		}
-
-		// get stats from expel
-		select {
-		case stats = <-o.statsChan:
-			stats.Monitoring = monrun
-		default:
-		}
-
-		// marshal
-		data, err := json.Marshal(stats)
-		if err != nil {
-			fmt.Printf("%v\n", err)
-		} else {
-			// send stats to reservoird
-			select {
-			case statsChan <- string(data):
-			default:
-			}
-		}
-
-		if monrun == true {
-			time.Sleep(time.Millisecond)
-		}
-	}
-}
-
 // Running states whether or not expel is running
 func (o *Stdout) Running() bool {
 	return o.run
 }
 
 // Expel reads messages from a channel and writes them to stdout
-func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGroup) {
-	defer wg.Done()
+func (o *Stdout) Expel(queues []icd.Queue, mc *icd.MonitorControl) {
+	defer mc.WaitGroup.Done()
 
 	stats := StdoutStats{}
 
@@ -153,7 +99,7 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 
 		// clear
 		select {
-		case <-o.clearChan:
+		case <-mc.ClearChan:
 			stats = StdoutStats{}
 			stats.Name = o.cfg.Name
 			stats.Running = o.run
@@ -162,17 +108,17 @@ func (o *Stdout) Expel(queues []icd.Queue, done <-chan struct{}, wg *sync.WaitGr
 
 		// send to monitor
 		select {
-		case o.statsChan <- stats:
+		case mc.StatsChan <- stats:
 		default:
 		}
 
 		// listen for shutdown
 		select {
-		case <-done:
+		case <-mc.DoneChan:
 			o.run = false
 			stats.Running = o.run
 			// send final stats blocking
-			o.statsChan <- stats
+			mc.StatsChan <- stats
 		default:
 		}
 
