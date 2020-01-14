@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
+	"runtime"
 	"time"
 
 	"github.com/reservoird/icd"
@@ -119,9 +120,7 @@ func (o *Stdout) Expel(queues []icd.Queue, mc *icd.MonitorControl) {
 		default:
 		}
 
-		if o.run == true {
-			time.Sleep(time.Millisecond)
-		}
+		runtime.Gosched()
 	}
 
 	// final send blocking
