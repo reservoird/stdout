@@ -124,9 +124,6 @@ func (o *Stdout) Expel(queues []icd.Queue, mc *icd.MonitorControl) {
 		}
 	}
 
-	// send final stats
-	select {
-	case mc.StatsChan <- stats:
-	case <-time.After(time.Second):
-	}
+	// final send blocking
+	mc.StatsChan <- stats
 }
