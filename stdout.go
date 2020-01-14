@@ -125,5 +125,5 @@ func (o *Stdout) Expel(queues []icd.Queue, mc *icd.MonitorControl) {
 	}
 
 	// final send blocking
-	mc.StatsChan <- stats
+	mc.FinalStatsChan <- stats
 }
