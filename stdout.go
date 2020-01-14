@@ -117,13 +117,17 @@ func (o *Stdout) Expel(queues []icd.Queue, mc *icd.MonitorControl) {
 		case <-mc.DoneChan:
 			o.run = false
 			stats.Running = o.run
-			// send final stats blocking
-			mc.StatsChan <- stats
 		default:
 		}
 
 		if o.run == true {
 			time.Sleep(time.Millisecond)
 		}
+	}
+
+	// send final stats
+	select {
+	case mc.StatsChan <- stats:
+	default:
 	}
 }
