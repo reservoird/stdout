@@ -21,7 +21,6 @@ type StdoutStats struct {
 	MessagesReceived uint64
 	MessagesSent     uint64
 	Running          bool
-	Monitoring       bool
 }
 
 // Stdout contains what is needed for expeller
@@ -128,6 +127,6 @@ func (o *Stdout) Expel(queues []icd.Queue, mc *icd.MonitorControl) {
 	// send final stats
 	select {
 	case mc.StatsChan <- stats:
-	default:
+	case <-time.After(time.Second):
 	}
 }
