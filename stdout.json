@@ -1,4 +1,5 @@
 {
   "name": "stdout",
+  "sleepDuration": "1s",
   "timestamp": true
 }

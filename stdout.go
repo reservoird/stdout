@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"runtime"
 	"time"
 
 	"github.com/reservoird/icd"
@@ -12,8 +11,9 @@ import (
 
 // StdoutCfg contains config
 type StdoutCfg struct {
-	Name      string
-	Timestamp bool
+	Name          string
+	SleepDuration string
+	Timestamp     bool
 }
 
 // StdoutStats contains stats
@@ -26,15 +26,17 @@ type StdoutStats struct {
 
 // Stdout contains what is needed for expeller
 type Stdout struct {
-	cfg StdoutCfg
-	run bool
+	cfg   StdoutCfg
+	sleep time.Duration
+	run   bool
 }
 
 // New is what reservoird to create and start stdout
 func New(cfg string) (icd.Expeller, error) {
 	c := StdoutCfg{
-		Name:      "com.reservoird.expel.stdout",
-		Timestamp: false,
+		Name:          "com.reservoird.expel.stdout",
+		SleepDuration: "1s",
+		Timestamp:     false,
 	}
 	if cfg != "" {
 		d, err := ioutil.ReadFile(cfg)
@@ -46,9 +48,14 @@ func New(cfg string) (icd.Expeller, error) {
 			return nil, err
 		}
 	}
+	sleep, err := time.ParseDuration(c.SleepDuration)
+	if err != nil {
+		return nil, fmt.Errorf("error parsing duration")
+	}
 	o := &Stdout{
-		cfg: c,
-		run: false,
+		cfg:   c,
+		sleep: sleep,
+		run:   false,
 	}
 	return o, nil
 }
@@ -117,10 +124,8 @@ func (o *Stdout) Expel(queues []icd.Queue, mc *icd.MonitorControl) {
 		case <-mc.DoneChan:
 			o.run = false
 			stats.Running = o.run
-		default:
+		case <-time.After(o.sleep):
 		}
-
-		runtime.Gosched()
 	}
 
 	// final send blocking
